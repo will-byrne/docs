@@ -137,10 +137,12 @@ Frameworks such as [Playwright](https://playwright.dev/) will connect to a runni
 ### Potential pitfalls
 
 ## When to test
-asap
+Testing should be started before even the first line of code is written (where possible). This is known as test driven development and as long as you know the shape of your functions or have a reasonable approximation of their output then you can write the tests ahead of time and code until the tests pass. This is an area where having strong requirements can really help as they can be used to derive the test cases which can help when deciding how to architect the project. Regression tests should be written as soon as work starts to fix a bug, even if these tests do not remain in the code base they are often very useful in determining the cause of the issue and indicating when it is fixed.
 
 ## Common mistakes
 ### Over / Under testing
+When writing tests getting the correct amount of coverage without going overboard is difficult. It is a function of coverage / time as to how many tests you can write on the system. Part of this is down to the resources available wherever the tests are being run and even the quality of the tests and frameworks used. The longer tests take to run the more of a chore they seem to be and the more they increase the maintenance burden.
+
 ### Testing external code
 ### Complex tests
 ### Async hell
