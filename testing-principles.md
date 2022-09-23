@@ -74,11 +74,74 @@ await navigationHelper.navigateToDetailsPage(true, "Feature Article");
 This created an instance of the navigation helper and then uses the test framework to enact the minimum happy path to get to the details page setting all of the fields to be complete and the article type to be a 'Feature Article'. The other big advantage of this is a single place in the tests where selectors are defined, if an input box has its class changed then it only needs to be changed on relevant page object.
 
 ## Mocking
+Mocking is where a dependency is replaced with something under the testers control, this can be a stub, a replacement function or just a noop to keep the type system happy. Mocking allows for testing only the local code without caring whether anything else is working as expected, it adds a granularity to the tests so that when `dependency a` is broken when you test your code it wont affect the result.
+
+for example:
+
+```ts
+import fetch from 'node-fetch';
+
+// a function that retrieves an image from the a server and adds it to a datastore returning true if successful
+export const getImage = async (url, datastore): Buffer => {
+  const imageData = await fetch(url, { headers: 'some_header'});
+  const success = await datastore.store(imageData.buffer, imageData.name, imageData.encoding);
+  return success;
+};
+```
+This is a simple function that retries an image object and stores it in a datastore with the name and the encoding. To unit test this in isolation the `fetch` call and the `datastore.store` call should both be mocked so the tests are not in any way dependent on services outside of the unit. In jest this would be done simply with:
+```ts
+import { getImage } from './image-processing';
+import fetch from 'node-fetch';
+const fetchMock = jest.mock('node-fetch');
+
+describe('test', () => {
+  it('stores the image with the image name and correct encoding', async () => {
+    const datastoreMock = {
+      store: jest.fn().mockImplementation(() => Promise.resolve(true)),
+    };
+    fetchMock.mockResolve({ buffer: 'some mocked buffer', name: 'i am a mock image', encoding: 'base64});
+
+    const result = await getImage('test-url', datastoreMock);
+
+    expect(datastoreMock.store).toHaveBeenCalledWith('some mocked buffer', 'i am a mock imnage', 'base64');
+  });
+});
+```
+What this is doing is creating a stubbed mock of the import of `fetch` which is then being told to mock a resolved promise with an object we have defined. The datastore only had one function being used so we are telling jest that it should return a resolved promise of `true`. Finally in the expect we are asserting the datastore mocked function was called with the specified parameters.
+> note: this is a simple example and mocking can be used for much more complex cases.
+
+### What to mock
+When writing unit tests in an ideal world everything outside of the unit being tested should be a mock. Realistically this leads to slower test writing and more complex tests, how much is mocked is something that should be agreed on by the team for each project. At a minimum it is recomended that everything external to the codebase and everything that is an async call should be mocked. This is to ensure that no external code is being tested, our tests dont depend on the status and wuality of external services and that our own async functions do not slow down the unit tests.
+
+For integration, end to end, and browser tests all external services should be mocked as per the unit tests however internal async calls should not, it is in these two test stages that the interaction between our units is being tested so mocking them here would be counter productive. External calls here can be mocked either internally or by using a mock service that only returns what is set beforehand and can be created / destroyed per test run. For example if the application uses Amazon S3 buckets then in the integration and end to end tests a docker container can be started  like S3mock which is preloaded with the data the tests require.
+
+### Types of mock
+- Stub: an object matching the shape of the item being mocked with noop functions replacing real ones, great for when you don't care about its return value in the test.
+- Function: a function that matches the types of the one being mocked that will always return a hardcoded value for use in the test.
+- Hardcoded data: Often used in conjunction with the function mock, this is a store result or object that can be used in the test.
+- Services: a clone of an external service that matches the shape of its api. Easy to manage with docker and to bring up a fresh instance with the dataset required for the test suite.
+- Spies: almost synonymous with mock but spies are used to examine the state of a mock that is being used in a test, in the above example the jest mock for `datastore.store()` allows assertions on what arguments the function was called with.
 
 ## Debugging
+Debugging tests is the same as any other application. Using an IDE such as Webstorm allows line by line inspection as does various node terminal runners. Simply using `console.log` in test is often enough to see what is being called and what the state of various stages of the code is at when the test is running.
+> note: remember to remove testing logs from the codebase before pushing back to source control to avoid polluting the application logs.
 
 ## Test Frameworks
+Test frameworks are used to help write, architect and run your tests. There are many frameworks per language and the choice of which to use is a team decision. There are also frameworks that can be used to test other frameworks using in the production code, for example [Testing-library](https://testing-library.com/) is a very useful tool for testing web based front end units in js / ts especially React, Vue, Angular, etc....
+
+### Advantages
+Test frameworks can take a lot of the burden and boilerplate out of writing tests. Testing-Library allows for individual React components to be rendered to a virtual dom simulating the browser environment without needing to worry about using something like PhantomJS, it also simulates the user interaction with the component as if it were in a browser.
+
+Frameworks such as [Playwright](https://playwright.dev/) will connect to a running web front end and allow for user interaction and testing to be done on code running in the browser
+### Disadvantages
+### Potential pitfalls
 
 ## When to test
+asap
 
-## Pitfalls
+## Common mistakes
+### Over / Under testing
+### Testing external code
+### Complex tests
+### Async hell
+
